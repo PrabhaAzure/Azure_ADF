@@ -1,0 +1,9 @@
+{
+	"name": "LearningADFKP",
+	"location": "southindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "22779afb-77d8-49ed-b141-838a3f7ff741",
+		"tenantId": "5b2cbc4a-4a82-47a0-932f-ba0857a5cbec"
+	}
+}

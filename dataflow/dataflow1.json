@@ -1,0 +1,95 @@
+{
+	"name": "dataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Employee_DS",
+						"type": "DatasetReference"
+					},
+					"name": "Employee"
+				},
+				{
+					"dataset": {
+						"referenceName": "Department_DS",
+						"type": "DatasetReference"
+					},
+					"name": "Department"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "EmployeeDept_Output_DS",
+						"type": "DatasetReference"
+					},
+					"name": "SinkEmpDept"
+				}
+			],
+			"transformations": [
+				{
+					"name": "join1"
+				},
+				{
+					"name": "join2"
+				},
+				{
+					"name": "select1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          E_ID as string,",
+				"          E_NAME as string,",
+				"          D_ID as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Employee",
+				"source(output(",
+				"          D_ID as string,",
+				"          D_NAME as string,",
+				"          D_HEAD as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Department",
+				"Employee, Department join(Employee@D_ID == Department@D_ID,",
+				"     joinType:'inner',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join1",
+				"select1, Employee join(D_HEAD == Employee@E_ID,",
+				"     joinType:'inner',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join2",
+				"join1 select(mapColumn(",
+				"          E_ID,",
+				"          E_NAME,",
+				"          D_ID = Employee@D_ID,",
+				"          D_NAME,",
+				"          D_HEAD",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"join2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['EmployeeDepartment2'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          E_ID = Employee@E_ID,",
+				"          E_NAME = Employee@E_NAME,",
+				"          D_ID = Employee@D_ID,",
+				"          D_NAME,",
+				"          D_HEAD,",
+				"          DEPT_HEAD_NAME = Employee@E_NAME",
+				"     ),",
+				"     partitionBy('hash', 1)) ~> SinkEmpDept"
+			]
+		}
+	}
+}

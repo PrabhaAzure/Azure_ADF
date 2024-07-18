@@ -1,0 +1,32 @@
+{
+	"name": "Table_Employee",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "2_AzureSqlDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "E_ID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "E_NAME",
+				"type": "varchar"
+			},
+			{
+				"name": "D_ID",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "EMPLOYEE1"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

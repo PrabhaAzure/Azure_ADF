@@ -1,0 +1,78 @@
+{
+	"name": "dataflow1_Derived",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "SampleDS_DF",
+						"type": "DatasetReference"
+					},
+					"name": "Employee"
+				},
+				{
+					"dataset": {
+						"referenceName": "Department_DS",
+						"type": "DatasetReference"
+					},
+					"name": "Department"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "EmployeeDept_Output_DS",
+						"type": "DatasetReference"
+					},
+					"name": "SinkEmpDept"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          Index_ID as string,",
+				"          User_Id as string,",
+				"          First_Name as string,",
+				"          Last_Name as string,",
+				"          Sex as string,",
+				"          Email as string,",
+				"          Phone as string,",
+				"          Date_of_birth as string,",
+				"          Job_Title as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Employee",
+				"source(output(",
+				"          D_ID as string,",
+				"          D_NAME as string,",
+				"          D_HEAD as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Department",
+				"Employee derive(AGE = currentDate()- toDate(Date_of_birth),",
+				"          Gender = iif(Sex=='Male','M','F')) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['SampleCustomer1'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          User_Id,",
+				"          First_Name,",
+				"          Date_of_birth,",
+				"          Job_Title,",
+				"          AGE,",
+				"          Gender",
+				"     ),",
+				"     partitionBy('hash', 1)) ~> SinkEmpDept"
+			]
+		}
+	}
+}

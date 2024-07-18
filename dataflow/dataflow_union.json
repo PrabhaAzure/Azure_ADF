@@ -1,0 +1,111 @@
+{
+	"name": "dataflow_union",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Employee_DS",
+						"type": "DatasetReference"
+					},
+					"name": "Emp1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Emp2",
+						"type": "DatasetReference"
+					},
+					"name": "Emp2"
+				},
+				{
+					"dataset": {
+						"referenceName": "Emp2",
+						"type": "DatasetReference"
+					},
+					"name": "Emp3"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "EmployeeDept_Output_DS",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "union1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "sort1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "derivedColumn3"
+				},
+				{
+					"name": "derivedColumn4"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          E_ID as string,",
+				"          E_NAME as string,",
+				"          D_ID as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Emp1",
+				"source(output(",
+				"          E_ID as string,",
+				"          E_NAME as string,",
+				"          D_ID as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Emp2",
+				"source(output(",
+				"          E_ID as string,",
+				"          E_NAME as string,",
+				"          D_ID as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Emp3",
+				"derivedColumn4, derivedColumn3, derivedColumn2, select1 union(byName: true)~> union1",
+				"Emp3 derive(E_NAME = concat(E_NAME, ' Stark'),",
+				"          E_ID = toInteger(E_ID) + 10) ~> derivedColumn1",
+				"derivedColumn1 select(mapColumn(",
+				"          E_ID,",
+				"          E_NAME,",
+				"          D_ID",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"union1 sort(desc(E_NAME, true),",
+				"     caseInsensitive: true) ~> sort1",
+				"Emp3 derive(E_NAME = concat(substring(E_NAME,1,2),' Targerian'),",
+				"          E_ID = toInteger(E_ID) + 20) ~> derivedColumn2",
+				"Emp2 derive(E_ID = toInteger(E_ID)) ~> derivedColumn3",
+				"Emp1 derive(E_ID = toInteger(E_ID)) ~> derivedColumn4",
+				"sort1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['UnionEmployee'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}

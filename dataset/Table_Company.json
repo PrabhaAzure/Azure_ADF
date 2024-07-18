@@ -1,0 +1,27 @@
+{
+	"name": "Table_Company",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "2_AzureSqlDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "C_ID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "C_NAME",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "Company"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

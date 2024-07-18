@@ -1,0 +1,25 @@
+{
+	"name": "ST_EVERY_10_HOURS",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "P_LOAD_AZURE_EXPORT_TO_BLOB",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 10,
+				"startTime": "2024-07-14T17:26:00",
+				"endTime": "2024-07-20T23:59:00",
+				"timeZone": "India Standard Time"
+			}
+		}
+	}
+}

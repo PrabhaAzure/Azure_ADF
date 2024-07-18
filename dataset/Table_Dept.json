@@ -1,0 +1,32 @@
+{
+	"name": "Table_Dept",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "2_AzureSqlDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "D_ID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "D_Name",
+				"type": "varchar"
+			},
+			{
+				"name": "C_ID",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "Department"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

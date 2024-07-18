@@ -1,0 +1,13 @@
+{
+	"name": "SnowflakeTable_Load_Sample_DS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Snowflake_Prabha2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SnowflakeV2Table",
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
