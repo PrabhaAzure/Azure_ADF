@@ -492,7 +492,9 @@
 				}
 			}
 		],
-		"annotations": [],
+		"annotations": [
+			"Snowflake Pipeline"
+		],
 		"lastPublishTime": "2024-07-14T10:25:41Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
