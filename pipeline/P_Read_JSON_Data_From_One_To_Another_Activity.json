@@ -103,6 +103,8 @@
 				"type": "String"
 			}
 		},
-		"annotations": []
+		"annotations": [
+			"Metadata"
+		]
 	}
 }
