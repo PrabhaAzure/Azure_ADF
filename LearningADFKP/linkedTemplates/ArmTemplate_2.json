@@ -1310,6 +1310,107 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/P_failActivity')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "Load_Samples_DataSet",
+								"type": "DatasetReference",
+								"parameters": {
+									"P_FileName": "FileNotExists.csv"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "EmployeeDept_Output_DS",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Web1",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "Copy data1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "GET",
+							"headers": {},
+							"url": "https://reqres.in/api/users"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/WIP_Tutorial')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -2725,87 +2826,6 @@
 						"          D_NAME",
 						"     ),",
 						"     partitionBy('hash', 1)) ~> SINKITEmployee"
-					]
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/dataflow1_Derived')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "SampleDS_DF",
-								"type": "DatasetReference"
-							},
-							"name": "Employee"
-						},
-						{
-							"dataset": {
-								"referenceName": "Department_DS",
-								"type": "DatasetReference"
-							},
-							"name": "Department"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "EmployeeDept_Output_DS",
-								"type": "DatasetReference"
-							},
-							"name": "SinkEmpDept"
-						}
-					],
-					"transformations": [
-						{
-							"name": "derivedColumn1"
-						}
-					],
-					"scriptLines": [
-						"source(output(",
-						"          Index_ID as string,",
-						"          User_Id as string,",
-						"          First_Name as string,",
-						"          Last_Name as string,",
-						"          Sex as string,",
-						"          Email as string,",
-						"          Phone as string,",
-						"          Date_of_birth as string,",
-						"          Job_Title as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> Employee",
-						"source(output(",
-						"          D_ID as string,",
-						"          D_NAME as string,",
-						"          D_HEAD as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> Department",
-						"Employee derive(AGE = currentDate()- toDate(Date_of_birth),",
-						"          Gender = iif(Sex=='Male','M','F')) ~> derivedColumn1",
-						"derivedColumn1 sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['SampleCustomer1'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     mapColumn(",
-						"          User_Id,",
-						"          First_Name,",
-						"          Date_of_birth,",
-						"          Job_Title,",
-						"          AGE,",
-						"          Gender",
-						"     ),",
-						"     partitionBy('hash', 1)) ~> SinkEmpDept"
 					]
 				}
 			},
