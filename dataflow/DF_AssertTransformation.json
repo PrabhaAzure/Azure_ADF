@@ -1,0 +1,44 @@
+{
+	"name": "DF_AssertTransformation",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "InCorrectData"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "assert1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          E_ID as short,",
+				"          E_NAME as string,",
+				"          D_ID as short,",
+				"          DOJ as string",
+				"     ),",
+				"     useSchema: false,",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delimited',",
+				"     container: 'container1',",
+				"     folderPath: 'DataFlowFolder',",
+				"     fileName: 'Incorrect_Employee_data.csv',",
+				"     columnDelimiter: ',',",
+				"     escapeChar: '\\\\',",
+				"     quoteChar: '\\\"',",
+				"     columnNamesAsHeader: true) ~> InCorrectData",
+				"InCorrectData assert(expectTrue(!isNull(toDate(DOJ,'yyyyMMdd')), false, 'assertDOJ', null, 'Check right Date format')) ~> assert1"
+			]
+		}
+	}
+}
