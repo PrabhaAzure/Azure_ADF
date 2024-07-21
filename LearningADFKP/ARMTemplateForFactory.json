@@ -699,18 +699,12 @@
 						"userProperties": [],
 						"typeProperties": {
 							"dataflow": {
-								"referenceName": "DF_JSON_PARSE",
+								"referenceName": "DFInLineDS",
 								"type": "DataFlowReference",
 								"parameters": {},
 								"datasetParameters": {
-									"SCUSTOMERSJSONTEST": {},
-									"ParseCustomer2": {
-										"P_FileName": "JSON_Parse_Customer.csv",
-										"P_FolderName": {
-											"value": "@pipeline().globalParameters.RootPath",
-											"type": "Expression"
-										}
-									}
+									"SourceInlineDS": {},
+									"SinkInlineDS": {}
 								}
 							},
 							"staging": {},
@@ -739,7 +733,7 @@
 				"lastPublishTime": "2024-07-17T16:03:00Z"
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/dataflows/DF_JSON_PARSE')]"
+				"[concat(variables('factoryId'), '/dataflows/DFInLineDS')]"
 			]
 		},
 		{

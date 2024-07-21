@@ -680,6 +680,63 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/P_DataFlow_Execution')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow3",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DFInLineDS",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"SourceInlineDS": {},
+									"SinkInlineDS": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "None",
+							"cacheSinks": {
+								"firstRowOnly": true
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"Prev_Max_Employee_ID": {
+						"type": "String"
+					}
+				},
+				"annotations": [
+					"CacheSink"
+				],
+				"lastPublishTime": "2024-07-17T16:03:00Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/DFInLineDS')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/P_LOAD_AZURE_EXPORT_TO_BLOB')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -2716,86 +2773,6 @@
 						"          D_NAME,",
 						"          D_HEAD,",
 						"          DEPT_HEAD_NAME = Employee@E_NAME",
-						"     ),",
-						"     partitionBy('hash', 1)) ~> SinkEmpDept"
-					]
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/dataflow1_Agg')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "Employee_DS",
-								"type": "DatasetReference"
-							},
-							"name": "Employee"
-						},
-						{
-							"dataset": {
-								"referenceName": "Department_DS",
-								"type": "DatasetReference"
-							},
-							"name": "Department"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "EmployeeDept_Output_DS",
-								"type": "DatasetReference"
-							},
-							"name": "SinkEmpDept"
-						}
-					],
-					"transformations": [
-						{
-							"name": "join1"
-						},
-						{
-							"name": "aggregate1"
-						}
-					],
-					"scriptLines": [
-						"source(output(",
-						"          E_ID as string,",
-						"          E_NAME as string,",
-						"          D_ID as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> Employee",
-						"source(output(",
-						"          D_ID as string,",
-						"          D_NAME as string,",
-						"          D_HEAD as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> Department",
-						"Employee, Department join(Employee@D_ID == Department@D_ID,",
-						"     joinType:'inner',",
-						"     matchType:'exact',",
-						"     ignoreSpaces: false,",
-						"     broadcast: 'auto')~> join1",
-						"join1 aggregate(groupBy(D_NAME),",
-						"     EmployeeCount = count(E_ID),",
-						"     partitionBy('hash', 1)) ~> aggregate1",
-						"aggregate1 sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['EmployeeCountByDepartment'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     mapColumn(",
-						"          D_NAME,",
-						"          EmployeeCount",
 						"     ),",
 						"     partitionBy('hash', 1)) ~> SinkEmpDept"
 					]
