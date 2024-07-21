@@ -18,7 +18,7 @@
 						"referenceName": "Export_Samples_Data",
 						"type": "DatasetReference"
 					},
-					"name": "sink1"
+					"name": "SinkStringify"
 				}
 			],
 			"transformations": [
@@ -50,7 +50,13 @@
 				"     partitionFileNames:['Stringify_OP1.csv'],",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     partitionBy('hash', 1)) ~> sink1"
+				"     mapColumn(",
+				"          name,",
+				"          skills,",
+				"          Address = AddressStringify,",
+				"          contact = contactStringify",
+				"     ),",
+				"     partitionBy('hash', 1)) ~> SinkStringify"
 			]
 		}
 	}
