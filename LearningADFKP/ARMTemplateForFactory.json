@@ -686,44 +686,6 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "Data flow2",
-						"type": "ExecuteDataFlow",
-						"state": "Inactive",
-						"onInactiveMarkAs": "Succeeded",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataflow": {
-								"referenceName": "dataflowRank",
-								"type": "DataFlowReference",
-								"parameters": {},
-								"datasetParameters": {
-									"source1": {},
-									"sink1": {
-										"P_FileName": "Rank_DR_Employee.csv",
-										"P_FolderName": {
-											"value": "@pipeline().globalParameters.RootPath",
-											"type": "Expression"
-										}
-									}
-								}
-							},
-							"staging": {},
-							"compute": {
-								"coreCount": 8,
-								"computeType": "General"
-							},
-							"traceLevel": "Fine"
-						}
-					},
-					{
 						"name": "Data flow3",
 						"type": "ExecuteDataFlow",
 						"dependsOn": [],
@@ -737,16 +699,18 @@
 						"userProperties": [],
 						"typeProperties": {
 							"dataflow": {
-								"referenceName": "DF_CacheSinklookup",
+								"referenceName": "DF_JSON_PARSE",
 								"type": "DataFlowReference",
 								"parameters": {},
 								"datasetParameters": {
-									"EmployeeIDMAX": {},
-									"source1": {},
-									"CountryCodre": {},
-									"CacheSinkMaxEID": {},
-									"CacheCountryCode": {},
-									"AzureDBCustomerUS": {}
+									"SCUSTOMERSJSONTEST": {},
+									"ParseCustomer2": {
+										"P_FileName": "JSON_Parse_Customer.csv",
+										"P_FolderName": {
+											"value": "@pipeline().globalParameters.RootPath",
+											"type": "Expression"
+										}
+									}
 								}
 							},
 							"staging": {},
@@ -775,8 +739,7 @@
 				"lastPublishTime": "2024-07-17T16:03:00Z"
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/dataflows/dataflowRank')]",
-				"[concat(variables('factoryId'), '/dataflows/DF_CacheSinklookup')]"
+				"[concat(variables('factoryId'), '/dataflows/DF_JSON_PARSE')]"
 			]
 		},
 		{
@@ -3014,6 +2977,49 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/Table_CUSTOMERS_JSON_TEST')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "2_AzureSqlDatabase",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "EID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Employee",
+						"type": "varchar"
+					},
+					{
+						"name": "SKILLS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Emp_Address",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Organization",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "CUSTOMERS_JSON_TEST"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/2_AzureSqlDatabase')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/Table_Company')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -3686,6 +3692,88 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/JsonFile_DS')]",
 				"[concat(variables('factoryId'), '/datasets/EmployeeDept_Output_DS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DF_JSON_PARSE')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Table_CUSTOMERS_JSON_TEST",
+								"type": "DatasetReference"
+							},
+							"name": "SCUSTOMERSJSONTEST"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "Export_Samples_Data",
+								"type": "DatasetReference"
+							},
+							"name": "ParseCustomer2"
+						}
+					],
+					"transformations": [
+						{
+							"name": "ParseDelimited"
+						},
+						{
+							"name": "ParseJson"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EID as integer,",
+						"          Employee as string,",
+						"          SKILLS as string,",
+						"          Emp_Address as string,",
+						"          Organization as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> SCUSTOMERSJSONTEST",
+						"SCUSTOMERSJSONTEST parse(ParseSkills = SKILLS ? (Skill_1 as string,",
+						"          Skill_2 as string,",
+						"          Skill_3 as string,",
+						"          Skill_4 as string),",
+						"     format: 'delimited',",
+						"     columnNamesAsHeader: false,",
+						"     columnDelimiter: '|',",
+						"     nullValue: '') ~> ParseDelimited",
+						"ParseDelimited parse(ParseAddress = Emp_Address ? (City as string,",
+						"          Country as string),",
+						"     format: 'json',",
+						"     documentForm: 'singleDocument') ~> ParseJson",
+						"ParseJson sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Parse_Customer_Json.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          EID,",
+						"          Employee,",
+						"          Organization,",
+						"          Skill_1 = ParseSkills.Skill_1,",
+						"          Skill_2 = ParseSkills.Skill_2,",
+						"          Skill_3 = ParseSkills.Skill_3,",
+						"          Skill_4 = ParseSkills.Skill_4,",
+						"          Country = ParseAddress.Country,",
+						"          City = ParseAddress.City",
+						"     ),",
+						"     partitionBy('hash', 1)) ~> ParseCustomer2"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Table_CUSTOMERS_JSON_TEST')]",
+				"[concat(variables('factoryId'), '/datasets/Export_Samples_Data')]"
 			]
 		},
 		{

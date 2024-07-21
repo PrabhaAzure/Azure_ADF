@@ -13,6 +13,527 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/CLONE_LOAD_AZURE_EXPORT')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata_Sample_Folder",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Metadata_Sample_Folder').output.childItems",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Copy_Sample_To_Azure",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Lookup1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [
+										{
+											"name": "Source",
+											"value": "container1/Samples/@{activity('Lookup1').output.firstRow.FILENAME}"
+										},
+										{
+											"name": "Destination",
+											"value": "@{activity('Lookup1').output.firstRow.TARGET_SCHEMA}.@{activity('Lookup1').output.firstRow.TARGET_TABLE}"
+										}
+									],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "AzureSqlSink",
+											"writeBehavior": "insert",
+											"sqlWriterUseTableLock": false
+										},
+										"enableStaging": false,
+										"logSettings": {
+											"enableCopyActivityLog": true,
+											"copyActivityLogSettings": {
+												"logLevel": "Info",
+												"enableReliableLogging": false
+											},
+											"logLocationSettings": {
+												"linkedServiceName": {
+													"referenceName": "AzureBlobStorage1",
+													"type": "LinkedServiceReference"
+												},
+												"path": "loggingfolder"
+											}
+										},
+										"translator": {
+											"value": "@json(activity('Lookup1').output.firstRow.JSON_MAPPING)",
+											"type": "Expression"
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "Load_Samples_DataSet",
+											"type": "DatasetReference",
+											"parameters": {
+												"P_FileName": {
+													"value": "@activity('Lookup1').output.firstRow.FILENAME",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "AzureSqlTable1",
+											"type": "DatasetReference",
+											"parameters": {
+												"P_TableName": {
+													"value": "@activity('Lookup1').output.firstRow.TARGET_TABLE",
+													"type": "Expression"
+												},
+												"P_SchemaName": {
+													"value": "@activity('Lookup1').output.firstRow.TARGET_SCHEMA",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Export_Azure_To_Blob",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Archive_File",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [
+										{
+											"name": "Source",
+											"value": "@{activity('Lookup1').output.firstRow.TARGET_SCHEMA}.@{activity('Lookup1').output.firstRow.TARGET_TABLE}"
+										},
+										{
+											"name": "Destination",
+											"value": "container1/Samples/"
+										}
+									],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderStoredProcedureName": "[[dbo].[Export_Data]",
+											"storedProcedureParameters": {
+												"Table_Name": {
+													"type": "String",
+													"value": {
+														"value": "@activity('Lookup1').output.firstRow.TARGET_TABLE",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"isolationLevel": "ReadCommitted",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobStorageWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "AzureSqlTable1",
+											"type": "DatasetReference",
+											"parameters": {
+												"P_TableName": {
+													"value": "@activity('Lookup1').output.firstRow.TARGET_TABLE",
+													"type": "Expression"
+												},
+												"P_SchemaName": {
+													"value": "@activity('Lookup1').output.firstRow.TARGET_SCHEMA",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Export_Samples_Data",
+											"type": "DatasetReference",
+											"parameters": {
+												"P_FileName": {
+													"value": "@concat(activity('Lookup1').output.firstRow.TARGET_TABLE,utcnow(),'.csv')",
+													"type": "Expression"
+												},
+												"P_FolderName": "output/Exports_Sample"
+											}
+										}
+									]
+								},
+								{
+									"name": "Lookup1",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "SELECT * FROM dbo.ADF_COPY_STORAGE_TABLE WHERE FILENAME = '@{item().name}'",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "AzureSqlTable1",
+											"type": "DatasetReference",
+											"parameters": {
+												"P_TableName": "ADF_COPY_STORAGE_TABLE",
+												"P_SchemaName": "dbo"
+											}
+										}
+									}
+								},
+								{
+									"name": "Archive_File",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Copy_Sample_To_Azure",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobStorageWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "Export_Samples_Data",
+											"type": "DatasetReference",
+											"parameters": {
+												"P_FileName": {
+													"value": "@activity('Lookup1').output.firstRow.TARGET_TABLE",
+													"type": "Expression"
+												},
+												"P_FolderName": "output/Exports_Sample"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Export_Samples_Data",
+											"type": "DatasetReference",
+											"parameters": {
+												"P_FileName": {
+													"value": "@concat(activity('Lookup1').output.firstRow.TARGET_TABLE,formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss'),'.csv')",
+													"type": "Expression"
+												},
+												"P_FolderName": "output/Archive"
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "Get Metadata_Sample_Folder",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "Delete2",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "SampleFolderDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "Archive_exports",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"wildcardFolderPath": "output/Exports_Sample",
+									"wildcardFileName": "*.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings",
+									"copyBehavior": "FlattenHierarchy"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "Archive_Export",
+								"type": "DatasetReference",
+								"parameters": {
+									"P_FolderName": "output/Exports_Sample"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "Archive_Export",
+								"type": "DatasetReference",
+								"parameters": {
+									"P_FolderName": "output/Archive"
+								}
+							}
+						]
+					},
+					{
+						"name": "Delete2",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "TRUNCAT_TARGET_TABLES",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "Archive_Export",
+								"type": "DatasetReference",
+								"parameters": {
+									"P_FolderName": "output/Exports_Sample"
+								}
+							},
+							"logStorageSettings": {
+								"linkedServiceName": {
+									"referenceName": "AzureBlobStorage1",
+									"type": "LinkedServiceReference"
+								},
+								"path": "container1/output/LOG"
+							},
+							"enableLogging": true,
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": false,
+								"wildcardFileName": "*.csv",
+								"enablePartitionDiscovery": false
+							}
+						}
+					},
+					{
+						"name": "TRUNCAT_TARGET_TABLES",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Archive_exports",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_LoadSample",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": "TRUNCATE TABLE [dbo].[CUSTOMER_SAMPLE];\nTRUNCATE TABLE [dbo].[ORGANIZATION_SAMPLE];\nTRUNCATE TABLE [dbo].[PEOPLE_SAMPLE];"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [
+					"Snowflake Pipeline"
+				],
+				"lastPublishTime": "2024-07-14T10:25:41Z"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/Delete files older than 30 days')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -1608,6 +2129,85 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/DF_JSON_PARSE')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Table_CUSTOMERS_JSON_TEST",
+								"type": "DatasetReference"
+							},
+							"name": "SCUSTOMERSJSONTEST"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "Export_Samples_Data",
+								"type": "DatasetReference"
+							},
+							"name": "ParseCustomer2"
+						}
+					],
+					"transformations": [
+						{
+							"name": "ParseDelimited"
+						},
+						{
+							"name": "ParseJson"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EID as integer,",
+						"          Employee as string,",
+						"          SKILLS as string,",
+						"          Emp_Address as string,",
+						"          Organization as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> SCUSTOMERSJSONTEST",
+						"SCUSTOMERSJSONTEST parse(ParseSkills = SKILLS ? (Skill_1 as string,",
+						"          Skill_2 as string,",
+						"          Skill_3 as string,",
+						"          Skill_4 as string),",
+						"     format: 'delimited',",
+						"     columnNamesAsHeader: false,",
+						"     columnDelimiter: '|',",
+						"     nullValue: '') ~> ParseDelimited",
+						"ParseDelimited parse(ParseAddress = Emp_Address ? (City as string,",
+						"          Country as string),",
+						"     format: 'json',",
+						"     documentForm: 'singleDocument') ~> ParseJson",
+						"ParseJson sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Parse_Customer_Json.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          EID,",
+						"          Employee,",
+						"          Organization,",
+						"          Skill_1 = ParseSkills.Skill_1,",
+						"          Skill_2 = ParseSkills.Skill_2,",
+						"          Skill_3 = ParseSkills.Skill_3,",
+						"          Skill_4 = ParseSkills.Skill_4,",
+						"          Country = ParseAddress.Country,",
+						"          City = ParseAddress.City",
+						"     ),",
+						"     partitionBy('hash', 1)) ~> ParseCustomer2"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/DF_Pivot')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -2206,146 +2806,6 @@
 						"          Gender",
 						"     ),",
 						"     partitionBy('hash', 1)) ~> SinkEmpDept"
-					]
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/dataflow1_copy1')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "Employee_DS",
-								"type": "DatasetReference"
-							},
-							"name": "Employee"
-						},
-						{
-							"dataset": {
-								"referenceName": "Department_DS",
-								"type": "DatasetReference"
-							},
-							"name": "Department"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "EmployeeDept_Output_DS",
-								"type": "DatasetReference"
-							},
-							"name": "SinkEmpDept"
-						}
-					],
-					"transformations": [
-						{
-							"name": "join1"
-						},
-						{
-							"name": "filter1"
-						}
-					],
-					"scriptLines": [
-						"source(output(",
-						"          E_ID as string,",
-						"          E_NAME as string,",
-						"          D_ID as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> Employee",
-						"source(output(",
-						"          D_ID as string,",
-						"          D_NAME as string,",
-						"          D_HEAD as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> Department",
-						"Employee, Department join(Employee@D_ID == Department@D_ID,",
-						"     joinType:'inner',",
-						"     matchType:'exact',",
-						"     ignoreSpaces: false,",
-						"     broadcast: 'auto')~> join1",
-						"join1 filter(D_NAME == 'CSE') ~> filter1",
-						"filter1 sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['CSEDepartment'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     mapColumn(",
-						"          E_ID,",
-						"          E_NAME,",
-						"          D_ID = Employee@D_ID,",
-						"          Dept_NAME = D_NAME,",
-						"          Dept_HEAD = D_HEAD",
-						"     ),",
-						"     partitionBy('hash', 1)) ~> SinkEmpDept"
-					]
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/dataflowRank')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "Emp_Gender_DS",
-								"type": "DatasetReference"
-							},
-							"name": "source1"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "Export_Samples_Data",
-								"type": "DatasetReference"
-							},
-							"name": "sink1"
-						}
-					],
-					"transformations": [
-						{
-							"name": "rank1"
-						},
-						{
-							"name": "rank2"
-						}
-					],
-					"scriptLines": [
-						"source(output(",
-						"          E_ID as string,",
-						"          E_NAME as string,",
-						"          D_ID as string,",
-						"          Gender as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> source1",
-						"source1 rank(asc(D_ID, true),",
-						"     output(RANK_ID as long)) ~> rank1",
-						"rank1 rank(asc(D_ID, true),",
-						"     output(Dense_Rank as long),",
-						"     dense: true) ~> rank2",
-						"rank2 sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['Rank_DR_Employee.csv'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     partitionBy('hash', 1)) ~> sink1"
 					]
 				}
 			},

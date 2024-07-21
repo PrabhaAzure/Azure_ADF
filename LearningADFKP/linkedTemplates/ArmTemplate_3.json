@@ -13,6 +13,146 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/dataflow1_copy1')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Employee_DS",
+								"type": "DatasetReference"
+							},
+							"name": "Employee"
+						},
+						{
+							"dataset": {
+								"referenceName": "Department_DS",
+								"type": "DatasetReference"
+							},
+							"name": "Department"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "EmployeeDept_Output_DS",
+								"type": "DatasetReference"
+							},
+							"name": "SinkEmpDept"
+						}
+					],
+					"transformations": [
+						{
+							"name": "join1"
+						},
+						{
+							"name": "filter1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          E_ID as string,",
+						"          E_NAME as string,",
+						"          D_ID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> Employee",
+						"source(output(",
+						"          D_ID as string,",
+						"          D_NAME as string,",
+						"          D_HEAD as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> Department",
+						"Employee, Department join(Employee@D_ID == Department@D_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join1",
+						"join1 filter(D_NAME == 'CSE') ~> filter1",
+						"filter1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['CSEDepartment'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          E_ID,",
+						"          E_NAME,",
+						"          D_ID = Employee@D_ID,",
+						"          Dept_NAME = D_NAME,",
+						"          Dept_HEAD = D_HEAD",
+						"     ),",
+						"     partitionBy('hash', 1)) ~> SinkEmpDept"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/dataflowRank')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Emp_Gender_DS",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "Export_Samples_Data",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "rank1"
+						},
+						{
+							"name": "rank2"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          E_ID as string,",
+						"          E_NAME as string,",
+						"          D_ID as string,",
+						"          Gender as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 rank(asc(D_ID, true),",
+						"     output(RANK_ID as long)) ~> rank1",
+						"rank1 rank(asc(D_ID, true),",
+						"     output(Dense_Rank as long),",
+						"     dense: true) ~> rank2",
+						"rank2 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Rank_DR_Employee.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/dataflow_Lookup')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -202,44 +342,6 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "Data flow2",
-						"type": "ExecuteDataFlow",
-						"state": "Inactive",
-						"onInactiveMarkAs": "Succeeded",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataflow": {
-								"referenceName": "dataflowRank",
-								"type": "DataFlowReference",
-								"parameters": {},
-								"datasetParameters": {
-									"source1": {},
-									"sink1": {
-										"P_FileName": "Rank_DR_Employee.csv",
-										"P_FolderName": {
-											"value": "@pipeline().globalParameters.RootPath",
-											"type": "Expression"
-										}
-									}
-								}
-							},
-							"staging": {},
-							"compute": {
-								"coreCount": 8,
-								"computeType": "General"
-							},
-							"traceLevel": "Fine"
-						}
-					},
-					{
 						"name": "Data flow3",
 						"type": "ExecuteDataFlow",
 						"dependsOn": [],
@@ -253,16 +355,18 @@
 						"userProperties": [],
 						"typeProperties": {
 							"dataflow": {
-								"referenceName": "DF_CacheSinklookup",
+								"referenceName": "DF_JSON_PARSE",
 								"type": "DataFlowReference",
 								"parameters": {},
 								"datasetParameters": {
-									"EmployeeIDMAX": {},
-									"source1": {},
-									"CountryCodre": {},
-									"CacheSinkMaxEID": {},
-									"CacheCountryCode": {},
-									"AzureDBCustomerUS": {}
+									"SCUSTOMERSJSONTEST": {},
+									"ParseCustomer2": {
+										"P_FileName": "JSON_Parse_Customer.csv",
+										"P_FolderName": {
+											"value": "@pipeline().globalParameters.RootPath",
+											"type": "Expression"
+										}
+									}
 								}
 							},
 							"staging": {},
