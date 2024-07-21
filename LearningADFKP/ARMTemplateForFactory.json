@@ -1364,6 +1364,63 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/P_Stringify_DataFlow')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "DF_Stringify",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DF_Stringify_Sample",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"source1": {},
+									"SinkStringify": {
+										"P_FileName": "Stringify_OP2.csv",
+										"P_FolderName": {
+											"value": "@pipeline().globalParameters.RootPath",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "None",
+							"cacheSinks": {
+								"firstRowOnly": true
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [
+					"Stringify"
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/DF_Stringify_Sample')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/P_UPDATE_CDC_AZURE_EXPORTS')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -3745,6 +3802,111 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/DF_AssertTransformation')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "AzureBlobStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "InCorrectData"
+						},
+						{
+							"linkedService": {
+								"referenceName": "AzureBlobStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "DepartmentDS"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "AzureBlobStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "AssertOutput"
+						}
+					],
+					"transformations": [
+						{
+							"name": "assert1"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "FilterOutErrors"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          E_ID as short,",
+						"          E_NAME as string,",
+						"          D_ID as short,",
+						"          DOJ as string",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'container1',",
+						"     folderPath: 'DataFlowFolder',",
+						"     fileName: 'Incorrect_Employee_data.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> InCorrectData",
+						"source(output(",
+						"          D_ID as short,",
+						"          D_NAME as string,",
+						"          D_HEAD as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'container1',",
+						"     folderPath: 'DataFlowFolder',",
+						"     fileName: 'Department.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> DepartmentDS",
+						"InCorrectData, DepartmentDS assert(expectTrue(!isNull(toDate(DOJ,'yyyyMMdd')), false, 'assertDOJ', null, 'Check right Date format'),",
+						"     expectUnique(E_ID, false, 'assertUniqueEID', null, 'Check unique Employee ID'),",
+						"     expectExists(InCorrectData@D_ID == DepartmentDS@D_ID, false, 'assertCheckDept', null, 'Checking Department')) ~> assert1",
+						"assert1 derive(IsErrorRow = isError(),",
+						"          IsErrorUniqueEID = hasError('assertUniqueEID')) ~> derivedColumn1",
+						"derivedColumn1 filter(IsErrorRow == false()) ~> FilterOutErrors",
+						"FilterOutErrors sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delimited',",
+						"     container: 'container1',",
+						"     folderPath: 'output',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true,",
+						"     partitionFileNames:['Assert_Output_file.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> AssertOutput"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage1')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/DF_CacheSinklookup')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -5075,62 +5237,16 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/P_Stringify_DataFlow')]",
+			"name": "[concat(parameters('factoryName'), '/pipeline2')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
-				"activities": [
-					{
-						"name": "DF_Stringify",
-						"type": "ExecuteDataFlow",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataflow": {
-								"referenceName": "DF_Stringify_Sample",
-								"type": "DataFlowReference",
-								"parameters": {},
-								"datasetParameters": {
-									"source1": {},
-									"SinkStringify": {
-										"P_FileName": "Stringify_OP2.csv",
-										"P_FolderName": {
-											"value": "@pipeline().globalParameters.RootPath",
-											"type": "Expression"
-										}
-									}
-								},
-								"linkedServiceParameters": {}
-							},
-							"staging": {},
-							"compute": {
-								"coreCount": 8,
-								"computeType": "General"
-							},
-							"traceLevel": "None",
-							"cacheSinks": {
-								"firstRowOnly": true
-							}
-						}
-					}
-				],
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"annotations": [
-					"Stringify"
-				]
+				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/dataflows/DF_Stringify_Sample')]"
-			]
+			"dependsOn": []
 		}
 	]
 }

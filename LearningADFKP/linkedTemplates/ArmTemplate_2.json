@@ -13,6 +13,46 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/Union_Emp_DS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "UnionEmployee",
+						"folderPath": "DataFlowFolder",
+						"container": "container1"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "E_ID",
+						"type": "String"
+					},
+					{
+						"name": "E_NAME",
+						"type": "String"
+					},
+					{
+						"name": "D_ID",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/Vendor_DS')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -118,6 +158,109 @@
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
 						"     partitionBy('hash', 1)) ~> SinkInlineDS"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DF_AssertTransformation')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "AzureBlobStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "InCorrectData"
+						},
+						{
+							"linkedService": {
+								"referenceName": "AzureBlobStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "DepartmentDS"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "AzureBlobStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "AssertOutput"
+						}
+					],
+					"transformations": [
+						{
+							"name": "assert1"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "FilterOutErrors"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          E_ID as short,",
+						"          E_NAME as string,",
+						"          D_ID as short,",
+						"          DOJ as string",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'container1',",
+						"     folderPath: 'DataFlowFolder',",
+						"     fileName: 'Incorrect_Employee_data.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> InCorrectData",
+						"source(output(",
+						"          D_ID as short,",
+						"          D_NAME as string,",
+						"          D_HEAD as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'container1',",
+						"     folderPath: 'DataFlowFolder',",
+						"     fileName: 'Department.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> DepartmentDS",
+						"InCorrectData, DepartmentDS assert(expectTrue(!isNull(toDate(DOJ,'yyyyMMdd')), false, 'assertDOJ', null, 'Check right Date format'),",
+						"     expectUnique(E_ID, false, 'assertUniqueEID', null, 'Check unique Employee ID'),",
+						"     expectExists(InCorrectData@D_ID == DepartmentDS@D_ID, false, 'assertCheckDept', null, 'Checking Department')) ~> assert1",
+						"assert1 derive(IsErrorRow = isError(),",
+						"          IsErrorUniqueEID = hasError('assertUniqueEID')) ~> derivedColumn1",
+						"derivedColumn1 filter(IsErrorRow == false()) ~> FilterOutErrors",
+						"FilterOutErrors sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delimited',",
+						"     container: 'container1',",
+						"     folderPath: 'output',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true,",
+						"     partitionFileNames:['Assert_Output_file.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> AssertOutput"
 					]
 				}
 			},
@@ -2620,131 +2763,6 @@
 				}
 			},
 			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/DF_Surrogate')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "Union_Emp_DS",
-								"type": "DatasetReference"
-							},
-							"name": "source1"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "EmployeeDept_Output_DS",
-								"type": "DatasetReference"
-							},
-							"name": "SurKey"
-						}
-					],
-					"transformations": [
-						{
-							"name": "surrogateKey1"
-						},
-						{
-							"name": "select1"
-						}
-					],
-					"scriptLines": [
-						"source(output(",
-						"          E_ID as string,",
-						"          E_NAME as string,",
-						"          D_ID as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> source1",
-						"source1 keyGenerate(output(EMPLOYEE_KEY as long),",
-						"     startAt: 10001L,",
-						"     stepValue: 1L) ~> surrogateKey1",
-						"surrogateKey1 select(mapColumn(",
-						"          EMPLOYEE_KEY,",
-						"          EmployeeID = E_ID,",
-						"          Name = E_NAME,",
-						"          DepartmentID = D_ID",
-						"     ),",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true) ~> select1",
-						"select1 sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['Key_Surrogate_Employees'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     partitionBy('hash', 1)) ~> SurKey"
-					]
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/DF_Unpivot')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "Vendor_DS",
-								"type": "DatasetReference"
-							},
-							"name": "source1"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "EmployeeDept_Output_DS",
-								"type": "DatasetReference"
-							},
-							"name": "sink1"
-						}
-					],
-					"transformations": [
-						{
-							"name": "unpivot1"
-						}
-					],
-					"scriptLines": [
-						"source(output(",
-						"          P_ID as string,",
-						"          Vendor as string,",
-						"          Apples as string,",
-						"          Oranges as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> source1",
-						"source1 unpivot(output(",
-						"          FRUITS as string,",
-						"          Count as string",
-						"     ),",
-						"     ungroupBy(P_ID,",
-						"          Vendor),",
-						"     lateral: true,",
-						"     ignoreNullPivots: false) ~> unpivot1",
-						"unpivot1 sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['UnPivot_Vendor'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     partitionBy('hash', 1)) ~> sink1"
-					]
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/Vendor_DS')]"
-			]
 		}
 	]
 }
