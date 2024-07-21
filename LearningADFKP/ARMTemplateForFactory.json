@@ -753,7 +753,9 @@
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"annotations": [],
+				"annotations": [
+					"CacheSink"
+				],
 				"lastPublishTime": "2024-07-17T16:03:00Z"
 			},
 			"dependsOn": [
