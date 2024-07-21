@@ -16,8 +16,13 @@
 				"userProperties": [],
 				"typeProperties": {
 					"dataflow": {
-						"referenceName": "DF_CacheSinklookup",
-						"type": "DataFlowReference"
+						"referenceName": "DF_JSON_PARSE",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"ParseCustomer2": {
+								"P_FolderName": "output/Exports_Sample"
+							}
+						}
 					},
 					"compute": {
 						"coreCount": 8,
