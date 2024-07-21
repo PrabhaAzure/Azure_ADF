@@ -65,8 +65,16 @@
 				]
 			},
 			{
-				"name": "Send Mail",
-				"type": "WebActivity",
+				"name": "Fail1",
+				"type": "Fail",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [],
+				"userProperties": []
+			},
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
 				"dependsOn": [
 					{
 						"activity": "Copy data1",
@@ -76,35 +84,21 @@
 					}
 				],
 				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
 					"secureOutput": false,
 					"secureInput": false
 				},
 				"userProperties": [],
 				"typeProperties": {
-					"method": "POST",
-					"body": {
-						"value": "{\n    \"DataFactoryName\": \"LearningADFKP\",\n    \"ErroMessage\": \"@activity('Copy data1').error.message\",\n    \"Pipeline\": \"P_FailActivityMail\",\n    \"Runid\": \"@{pipeline().RunId}\"\n\n\n}",
-						"type": "Expression"
-					}
+					"variableName": "PV",
+					"value": "abc"
 				}
-			},
-			{
-				"name": "Fail1",
-				"type": "Fail",
-				"dependsOn": [
-					{
-						"activity": "Send Mail",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
-				"userProperties": []
 			}
 		],
+		"variables": {
+			"PV": {
+				"type": "String"
+			}
+		},
 		"annotations": []
 	}
 }
