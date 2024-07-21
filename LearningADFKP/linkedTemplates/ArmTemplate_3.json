@@ -13,6 +13,124 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/dataflow1_Cond_Split')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Employee_DS",
+								"type": "DatasetReference"
+							},
+							"name": "Employee"
+						},
+						{
+							"dataset": {
+								"referenceName": "Department_DS",
+								"type": "DatasetReference"
+							},
+							"name": "Department"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "EmployeeDept_Output_DS",
+								"type": "DatasetReference"
+							},
+							"name": "SinkEmpDept"
+						},
+						{
+							"dataset": {
+								"referenceName": "EmployeeDept_Output_DS",
+								"type": "DatasetReference"
+							},
+							"name": "SINKCIVILEmployees"
+						},
+						{
+							"dataset": {
+								"referenceName": "EmployeeDept_Output_DS",
+								"type": "DatasetReference"
+							},
+							"name": "SINKITEmployee"
+						}
+					],
+					"transformations": [
+						{
+							"name": "join1"
+						},
+						{
+							"name": "split1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          E_ID as string,",
+						"          E_NAME as string,",
+						"          D_ID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> Employee",
+						"source(output(",
+						"          D_ID as string,",
+						"          D_NAME as string,",
+						"          D_HEAD as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> Department",
+						"Employee, Department join(Employee@D_ID == Department@D_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join1",
+						"join1 split(equals(D_NAME,'CSE'),",
+						"     D_NAME=='CIVIL',",
+						"     equals(D_NAME,'IT'),",
+						"     disjoint: false) ~> split1@(CseEmployees, CivilEmployees, ItEmployees, Others)",
+						"split1@CseEmployees sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['1CSEEmployee'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          E_ID,",
+						"          E_NAME,",
+						"          D_NAME",
+						"     ),",
+						"     partitionBy('hash', 1)) ~> SinkEmpDept",
+						"split1@CivilEmployees sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['2CIVILEmployees'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          E_ID,",
+						"          E_NAME,",
+						"          D_NAME",
+						"     ),",
+						"     partitionBy('hash', 1)) ~> SINKCIVILEmployees",
+						"split1@ItEmployees sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['3ITEmployees'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          E_ID,",
+						"          E_NAME,",
+						"          D_NAME",
+						"     ),",
+						"     partitionBy('hash', 1)) ~> SINKITEmployee"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/dataflow1_Derived')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",

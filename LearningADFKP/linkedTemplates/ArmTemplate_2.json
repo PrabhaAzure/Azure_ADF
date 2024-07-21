@@ -13,6 +13,73 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/DFInLineDS')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "AzureBlobStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SourceInlineDS"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "AzureBlobStorage1",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SinkInlineDS"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          E_ID as short,",
+						"          E_NAME as string,",
+						"          D_ID as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'container1',",
+						"     folderPath: 'DataFlowFolder',",
+						"     fileName: 'Employee2.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> SourceInlineDS",
+						"SourceInlineDS derive(D_Name = case(D_ID == 1, 'IT',case(D_ID == 2, 'HR',case(D_ID == 3, 'Admin','Staff')))) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delimited',",
+						"     container: 'container1',",
+						"     folderPath: 'output',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true,",
+						"     partitionFileNames:['InlineDS_Employee_File.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SinkInlineDS"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/CLONE_LOAD_AZURE_EXPORT')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -2731,124 +2798,6 @@
 						"          EmployeeCount",
 						"     ),",
 						"     partitionBy('hash', 1)) ~> SinkEmpDept"
-					]
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/dataflow1_Cond_Split')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "Employee_DS",
-								"type": "DatasetReference"
-							},
-							"name": "Employee"
-						},
-						{
-							"dataset": {
-								"referenceName": "Department_DS",
-								"type": "DatasetReference"
-							},
-							"name": "Department"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "EmployeeDept_Output_DS",
-								"type": "DatasetReference"
-							},
-							"name": "SinkEmpDept"
-						},
-						{
-							"dataset": {
-								"referenceName": "EmployeeDept_Output_DS",
-								"type": "DatasetReference"
-							},
-							"name": "SINKCIVILEmployees"
-						},
-						{
-							"dataset": {
-								"referenceName": "EmployeeDept_Output_DS",
-								"type": "DatasetReference"
-							},
-							"name": "SINKITEmployee"
-						}
-					],
-					"transformations": [
-						{
-							"name": "join1"
-						},
-						{
-							"name": "split1"
-						}
-					],
-					"scriptLines": [
-						"source(output(",
-						"          E_ID as string,",
-						"          E_NAME as string,",
-						"          D_ID as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> Employee",
-						"source(output(",
-						"          D_ID as string,",
-						"          D_NAME as string,",
-						"          D_HEAD as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false) ~> Department",
-						"Employee, Department join(Employee@D_ID == Department@D_ID,",
-						"     joinType:'inner',",
-						"     matchType:'exact',",
-						"     ignoreSpaces: false,",
-						"     broadcast: 'auto')~> join1",
-						"join1 split(equals(D_NAME,'CSE'),",
-						"     D_NAME=='CIVIL',",
-						"     equals(D_NAME,'IT'),",
-						"     disjoint: false) ~> split1@(CseEmployees, CivilEmployees, ItEmployees, Others)",
-						"split1@CseEmployees sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['1CSEEmployee'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     mapColumn(",
-						"          E_ID,",
-						"          E_NAME,",
-						"          D_NAME",
-						"     ),",
-						"     partitionBy('hash', 1)) ~> SinkEmpDept",
-						"split1@CivilEmployees sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['2CIVILEmployees'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     mapColumn(",
-						"          E_ID,",
-						"          E_NAME,",
-						"          D_NAME",
-						"     ),",
-						"     partitionBy('hash', 1)) ~> SINKCIVILEmployees",
-						"split1@ItEmployees sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     partitionFileNames:['3ITEmployees'],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true,",
-						"     mapColumn(",
-						"          E_ID,",
-						"          E_NAME,",
-						"          D_NAME",
-						"     ),",
-						"     partitionBy('hash', 1)) ~> SINKITEmployee"
 					]
 				}
 			},
