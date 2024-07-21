@@ -10,12 +10,33 @@
 						"type": "LinkedServiceReference"
 					},
 					"name": "InCorrectData"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "DepartmentDS"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "AssertOutput"
+				}
+			],
 			"transformations": [
 				{
 					"name": "assert1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "FilterOutErrors"
 				}
 			],
 			"scriptLines": [
@@ -37,7 +58,42 @@
 				"     escapeChar: '\\\\',",
 				"     quoteChar: '\\\"',",
 				"     columnNamesAsHeader: true) ~> InCorrectData",
-				"InCorrectData assert(expectTrue(!isNull(toDate(DOJ,'yyyyMMdd')), false, 'assertDOJ', null, 'Check right Date format')) ~> assert1"
+				"source(output(",
+				"          D_ID as short,",
+				"          D_NAME as string,",
+				"          D_HEAD as short",
+				"     ),",
+				"     useSchema: false,",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delimited',",
+				"     container: 'container1',",
+				"     folderPath: 'DataFlowFolder',",
+				"     fileName: 'Department.csv',",
+				"     columnDelimiter: ',',",
+				"     escapeChar: '\\\\',",
+				"     quoteChar: '\\\"',",
+				"     columnNamesAsHeader: true) ~> DepartmentDS",
+				"InCorrectData, DepartmentDS assert(expectTrue(!isNull(toDate(DOJ,'yyyyMMdd')), false, 'assertDOJ', null, 'Check right Date format'),",
+				"     expectUnique(E_ID, false, 'assertUniqueEID', null, 'Check unique Employee ID'),",
+				"     expectExists(InCorrectData@D_ID == DepartmentDS@D_ID, false, 'assertCheckDept', null, 'Checking Department')) ~> assert1",
+				"assert1 derive(IsErrorRow = isError(),",
+				"          IsErrorUniqueEID = hasError('assertUniqueEID')) ~> derivedColumn1",
+				"derivedColumn1 filter(IsErrorRow == false()) ~> FilterOutErrors",
+				"FilterOutErrors sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delimited',",
+				"     container: 'container1',",
+				"     folderPath: 'output',",
+				"     columnDelimiter: ',',",
+				"     escapeChar: '\\\\',",
+				"     quoteChar: '\\\"',",
+				"     columnNamesAsHeader: true,",
+				"     partitionFileNames:['Assert_Output_file.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> AssertOutput"
 			]
 		}
 	}
