@@ -73,8 +73,8 @@
 				"userProperties": []
 			},
 			{
-				"name": "Set variable1",
-				"type": "SetVariable",
+				"name": "Web1",
+				"type": "WebActivity",
 				"dependsOn": [
 					{
 						"activity": "Copy data1",
@@ -84,13 +84,16 @@
 					}
 				],
 				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
 					"secureOutput": false,
 					"secureInput": false
 				},
 				"userProperties": [],
 				"typeProperties": {
-					"variableName": "PV",
-					"value": "abc"
+					"method": "GET",
+					"url": "https://reqres.in/api/users"
 				}
 			}
 		],
