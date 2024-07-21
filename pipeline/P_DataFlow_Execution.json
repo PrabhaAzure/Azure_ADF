@@ -20,7 +20,11 @@
 						"type": "DataFlowReference",
 						"datasetParameters": {
 							"ParseCustomer2": {
-								"P_FolderName": "output/Exports_Sample"
+								"P_FileName": "JSON_Parse_Customer.csv",
+								"P_FolderName": {
+									"value": "@pipeline().globalParameters.RootPath",
+									"type": "Expression"
+								}
 							}
 						}
 					},
