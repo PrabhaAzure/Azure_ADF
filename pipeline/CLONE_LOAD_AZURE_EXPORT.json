@@ -67,6 +67,20 @@
 									"sqlWriterUseTableLock": false
 								},
 								"enableStaging": false,
+								"logSettings": {
+									"enableCopyActivityLog": true,
+									"copyActivityLogSettings": {
+										"logLevel": "Info",
+										"enableReliableLogging": false
+									},
+									"logLocationSettings": {
+										"linkedServiceName": {
+											"referenceName": "AzureBlobStorage1",
+											"type": "LinkedServiceReference"
+										},
+										"path": "loggingfolder"
+									}
+								},
 								"translator": {
 									"value": "@json(activity('Lookup1').output.firstRow.JSON_MAPPING)",
 									"type": "Expression"
