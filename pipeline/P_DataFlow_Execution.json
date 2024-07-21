@@ -16,17 +16,8 @@
 				"userProperties": [],
 				"typeProperties": {
 					"dataflow": {
-						"referenceName": "DF_JSON_PARSE",
-						"type": "DataFlowReference",
-						"datasetParameters": {
-							"ParseCustomer2": {
-								"P_FileName": "JSON_Parse_Customer.csv",
-								"P_FolderName": {
-									"value": "@pipeline().globalParameters.RootPath",
-									"type": "Expression"
-								}
-							}
-						}
+						"referenceName": "DFInLineDS",
+						"type": "DataFlowReference"
 					},
 					"compute": {
 						"coreCount": 8,
