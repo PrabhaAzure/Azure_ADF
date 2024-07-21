@@ -6,38 +6,48 @@
 			"sources": [
 				{
 					"dataset": {
-						"referenceName": "Load_Samples_DataSet",
+						"referenceName": "Emp_Gender_DS",
 						"type": "DatasetReference"
 					},
 					"name": "source1"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Export_Samples_Data",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
 			"transformations": [
 				{
 					"name": "rank1"
+				},
+				{
+					"name": "rank2"
 				}
 			],
 			"scriptLines": [
 				"source(output(",
-				"          Index as string,",
-				"          {Customer Id} as string,",
-				"          {First Name} as string,",
-				"          {Last Name} as string,",
-				"          Company as string,",
-				"          City as string,",
-				"          Country as string,",
-				"          {Phone 1} as string,",
-				"          {Phone 2} as string,",
-				"          Email as string,",
-				"          {Subscription Date} as string,",
-				"          Website as string",
+				"          E_ID as string,",
+				"          E_NAME as string,",
+				"          D_ID as string,",
+				"          Gender as string",
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false) ~> source1",
-				"source1 rank(asc(ERROR_FUNCTION(''), true),",
-				"     output(a as long)) ~> rank1"
+				"source1 rank(asc(D_ID, true),",
+				"     output(RANK_ID as long)) ~> rank1",
+				"rank1 rank(asc(D_ID, true),",
+				"     output(Dense_Rank as long),",
+				"     dense: true) ~> rank2",
+				"rank2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1"
 			]
 		}
 	}
