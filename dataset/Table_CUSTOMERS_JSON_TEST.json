@@ -1,0 +1,38 @@
+{
+	"name": "Table_CUSTOMERS_JSON_TEST",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "2_AzureSqlDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "EID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Employee",
+				"type": "varchar"
+			},
+			{
+				"name": "SKILLS",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Emp_Address",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Organization",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "CUSTOMERS_JSON_TEST"
+		}
+	}
+}

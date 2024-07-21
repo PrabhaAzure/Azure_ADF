@@ -1,0 +1,76 @@
+{
+	"name": "DF_JSON_PARSE",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Table_CUSTOMERS_JSON_TEST",
+						"type": "DatasetReference"
+					},
+					"name": "SCUSTOMERSJSONTEST"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Export_Samples_Data",
+						"type": "DatasetReference"
+					},
+					"name": "ParseCustomer2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ParseDelimited"
+				},
+				{
+					"name": "ParseJson"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          EID as integer,",
+				"          Employee as string,",
+				"          SKILLS as string,",
+				"          Emp_Address as string,",
+				"          Organization as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> SCUSTOMERSJSONTEST",
+				"SCUSTOMERSJSONTEST parse(ParseSkills = SKILLS ? (Skill_1 as string,",
+				"          Skill_2 as string,",
+				"          Skill_3 as string,",
+				"          Skill_4 as string),",
+				"     format: 'delimited',",
+				"     columnNamesAsHeader: false,",
+				"     columnDelimiter: '|',",
+				"     nullValue: '') ~> ParseDelimited",
+				"ParseDelimited parse(ParseAddress = Emp_Address ? (City as string,",
+				"          Country as string),",
+				"     format: 'json',",
+				"     documentForm: 'singleDocument') ~> ParseJson",
+				"ParseJson sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Parse_Customer_Json.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          EID,",
+				"          Employee,",
+				"          Organization,",
+				"          Skill_1 = ParseSkills.Skill_1,",
+				"          Skill_2 = ParseSkills.Skill_2,",
+				"          Skill_3 = ParseSkills.Skill_3,",
+				"          Skill_4 = ParseSkills.Skill_4,",
+				"          Country = ParseAddress.Country,",
+				"          City = ParseAddress.City",
+				"     ),",
+				"     partitionBy('hash', 1)) ~> ParseCustomer2"
+			]
+		}
+	}
+}
