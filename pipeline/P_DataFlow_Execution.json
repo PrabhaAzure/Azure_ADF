@@ -65,8 +65,34 @@
 					},
 					"traceLevel": "Fine"
 				}
+			},
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Data flow3",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Prev_Max_Employee_ID",
+					"value": ""
+				}
 			}
 		],
+		"variables": {
+			"Prev_Max_Employee_ID": {
+				"type": "String"
+			}
+		},
 		"annotations": [
 			"CacheSink"
 		],
