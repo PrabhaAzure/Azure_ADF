@@ -1,0 +1,130 @@
+{
+	"name": "DF_CacheSinklookup",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Table_customer_US_Country",
+						"type": "DatasetReference"
+					},
+					"name": "EmployeeIDMAX"
+				},
+				{
+					"dataset": {
+						"referenceName": "DelimitedText3",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Country_Code",
+						"type": "DatasetReference"
+					},
+					"name": "CountryCodre"
+				}
+			],
+			"sinks": [
+				{
+					"name": "CacheSinkMaxEID"
+				},
+				{
+					"name": "CacheCountryCode"
+				},
+				{
+					"dataset": {
+						"referenceName": "Table_customer_US_Country",
+						"type": "DatasetReference"
+					},
+					"name": "AzureDBCustomerUS"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "SKEIDGenerator"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          MAX_EID as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'SELECT MAX(E_ID) AS MAX_EID FROM dbo.CUSTOMERS_US',",
+				"     format: 'query') ~> EmployeeIDMAX",
+				"source(output(",
+				"          customer as string,",
+				"          country as string,",
+				"          organization as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source(output(",
+				"          name as string,",
+				"          Country_Code as string,",
+				"          Country_Code2 as string,",
+				"          countryDesc_code as string,",
+				"          {iso_3166-2} as string,",
+				"          region as string,",
+				"          {sub-region} as string,",
+				"          {intermediate-region} as string,",
+				"          {region-code} as string,",
+				"          {sub-region-code} as string,",
+				"          {intermediate-region-code} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> CountryCodre",
+				"SKEIDGenerator derive(E_ID = E_ID + CacheSinkMaxEID#outputs()[1].MAX_EID,",
+				"          country = CacheCountryCode#lookup(country).name) ~> derivedColumn1",
+				"source1 keyGenerate(output(E_ID as long),",
+				"     startAt: 1L,",
+				"     stepValue: 1L) ~> SKEIDGenerator",
+				"EmployeeIDMAX sink(validateSchema: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     store: 'cache',",
+				"     format: 'inline',",
+				"     output: false,",
+				"     saveOrder: 1) ~> CacheSinkMaxEID",
+				"CountryCodre sink(validateSchema: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     keys:['Country_Code'],",
+				"     store: 'cache',",
+				"     format: 'inline',",
+				"     output: false,",
+				"     saveOrder: 1) ~> CacheCountryCode",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          E_ID as integer,",
+				"          Customer_Name as string,",
+				"          COUNTRY as string,",
+				"          Organization as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          E_ID,",
+				"          Customer_Name = customer,",
+				"          COUNTRY = country,",
+				"          Organization = organization",
+				"     )) ~> AzureDBCustomerUS"
+			]
+		}
+	}
+}

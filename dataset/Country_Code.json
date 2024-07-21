@@ -1,0 +1,69 @@
+{
+	"name": "Country_Code",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureBlobStorage1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "Country_Code.csv.csv",
+				"folderPath": "Samples",
+				"container": "container1"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "name",
+				"type": "String"
+			},
+			{
+				"name": "Country_Code",
+				"type": "String"
+			},
+			{
+				"name": "Country_Code2",
+				"type": "String"
+			},
+			{
+				"name": "countryDesc_code",
+				"type": "String"
+			},
+			{
+				"name": "iso_3166-2",
+				"type": "String"
+			},
+			{
+				"name": "region",
+				"type": "String"
+			},
+			{
+				"name": "sub-region",
+				"type": "String"
+			},
+			{
+				"name": "intermediate-region",
+				"type": "String"
+			},
+			{
+				"name": "region-code",
+				"type": "String"
+			},
+			{
+				"name": "sub-region-code",
+				"type": "String"
+			},
+			{
+				"name": "intermediate-region-code",
+				"type": "String"
+			}
+		]
+	}
+}
