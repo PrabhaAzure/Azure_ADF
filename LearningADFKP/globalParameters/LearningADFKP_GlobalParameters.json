@@ -1,6 +1,6 @@
 {
 	"RootPath": {
 		"type": "string",
-		"value": "Samples"
+		"value": "output"
 	}
 }

@@ -1,0 +1,387 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "LearningADFKP"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/dataflow_union')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Employee_DS",
+								"type": "DatasetReference"
+							},
+							"name": "Emp1"
+						},
+						{
+							"dataset": {
+								"referenceName": "Emp2",
+								"type": "DatasetReference"
+							},
+							"name": "Emp2"
+						},
+						{
+							"dataset": {
+								"referenceName": "Emp2",
+								"type": "DatasetReference"
+							},
+							"name": "Emp3"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "EmployeeDept_Output_DS",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "union1"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "select1"
+						},
+						{
+							"name": "sort1"
+						},
+						{
+							"name": "derivedColumn2"
+						},
+						{
+							"name": "derivedColumn3"
+						},
+						{
+							"name": "derivedColumn4"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          E_ID as string,",
+						"          E_NAME as string,",
+						"          D_ID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> Emp1",
+						"source(output(",
+						"          E_ID as string,",
+						"          E_NAME as string,",
+						"          D_ID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> Emp2",
+						"source(output(",
+						"          E_ID as string,",
+						"          E_NAME as string,",
+						"          D_ID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> Emp3",
+						"derivedColumn4, derivedColumn3, derivedColumn2, select1 union(byName: true)~> union1",
+						"Emp3 derive(E_NAME = concat(E_NAME, ' Stark'),",
+						"          E_ID = toInteger(E_ID) + 10) ~> derivedColumn1",
+						"derivedColumn1 select(mapColumn(",
+						"          E_ID,",
+						"          E_NAME,",
+						"          D_ID",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"union1 sort(desc(E_NAME, true),",
+						"     caseInsensitive: true) ~> sort1",
+						"Emp3 derive(E_NAME = concat(substring(E_NAME,1,2),' Targerian'),",
+						"          E_ID = toInteger(E_ID) + 20) ~> derivedColumn2",
+						"Emp2 derive(E_ID = toInteger(E_ID)) ~> derivedColumn3",
+						"Emp1 derive(E_ID = toInteger(E_ID)) ~> derivedColumn4",
+						"sort1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['UnionEmployee'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DF_CacheSinklookup')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Table_customer_US_Country",
+								"type": "DatasetReference"
+							},
+							"name": "EmployeeIDMAX"
+						},
+						{
+							"dataset": {
+								"referenceName": "DelimitedText3",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						},
+						{
+							"dataset": {
+								"referenceName": "Country_Code",
+								"type": "DatasetReference"
+							},
+							"name": "CountryCodre"
+						}
+					],
+					"sinks": [
+						{
+							"name": "CacheSinkMaxEID"
+						},
+						{
+							"name": "CacheCountryCode"
+						},
+						{
+							"dataset": {
+								"referenceName": "Table_customer_US_Country",
+								"type": "DatasetReference"
+							},
+							"name": "AzureDBCustomerUS"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "SKEIDGenerator"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          MAX_EID as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     query: 'SELECT MAX(E_ID) AS MAX_EID FROM dbo.CUSTOMERS_US',",
+						"     format: 'query') ~> EmployeeIDMAX",
+						"source(output(",
+						"          customer as string,",
+						"          country as string,",
+						"          organization as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source(output(",
+						"          name as string,",
+						"          Country_Code as string,",
+						"          Country_Code2 as string,",
+						"          countryDesc_code as string,",
+						"          {iso_3166-2} as string,",
+						"          region as string,",
+						"          {sub-region} as string,",
+						"          {intermediate-region} as string,",
+						"          {region-code} as string,",
+						"          {sub-region-code} as string,",
+						"          {intermediate-region-code} as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> CountryCodre",
+						"SKEIDGenerator derive(E_ID = E_ID + CacheSinkMaxEID#outputs()[1].MAX_EID,",
+						"          country = CacheCountryCode#lookup(country).name) ~> derivedColumn1",
+						"source1 keyGenerate(output(E_ID as long),",
+						"     startAt: 1L,",
+						"     stepValue: 1L) ~> SKEIDGenerator",
+						"EmployeeIDMAX sink(validateSchema: false,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     store: 'cache',",
+						"     format: 'inline',",
+						"     output: false,",
+						"     saveOrder: 1) ~> CacheSinkMaxEID",
+						"CountryCodre sink(validateSchema: false,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     keys:['Country_Code'],",
+						"     store: 'cache',",
+						"     format: 'inline',",
+						"     output: false,",
+						"     saveOrder: 1) ~> CacheCountryCode",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          E_ID as integer,",
+						"          Customer_Name as string,",
+						"          COUNTRY as string,",
+						"          Organization as string",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          E_ID,",
+						"          Customer_Name = customer,",
+						"          COUNTRY = country,",
+						"          Organization = organization",
+						"     )) ~> AzureDBCustomerUS"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/P_DataFlow_Execution')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow2",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "dataflowRank",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"source1": {},
+									"sink1": {
+										"P_FileName": "Rank_DR_Employee.csv",
+										"P_FolderName": {
+											"value": "@pipeline().globalParameters.RootPath",
+											"type": "Expression"
+										}
+									}
+								},
+								"linkedServiceParameters": {}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "Data flow3",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "Data flow2",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DF_CacheSinklookup",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"EmployeeIDMAX": {},
+									"source1": {},
+									"CountryCodre": {},
+									"CacheSinkMaxEID": {},
+									"CacheCountryCode": {},
+									"AzureDBCustomerUS": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-07-17T16:03:00Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/DF_CacheSinklookup')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ST_EVERY_10_HOURS')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "P_LOAD_AZURE_EXPORT_TO_BLOB",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 10,
+						"startTime": "2024-07-14T17:26:00",
+						"endTime": "2024-07-20T23:59:00",
+						"timeZone": "India Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

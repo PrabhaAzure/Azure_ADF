@@ -685,12 +685,60 @@
 						"userProperties": [],
 						"typeProperties": {
 							"dataflow": {
-								"referenceName": "DF_ValidateSchema",
+								"referenceName": "dataflowRank",
 								"type": "DataFlowReference",
 								"parameters": {},
 								"datasetParameters": {
 									"source1": {},
-									"sink1": {}
+									"sink1": {
+										"P_FileName": "Rank_DR_Employee.csv",
+										"P_FolderName": {
+											"value": "@pipeline().globalParameters.RootPath",
+											"type": "Expression"
+										}
+									}
+								},
+								"linkedServiceParameters": {}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "Data flow3",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "Data flow2",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DF_CacheSinklookup",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"EmployeeIDMAX": {},
+									"source1": {},
+									"CountryCodre": {},
+									"CacheSinkMaxEID": {},
+									"CacheCountryCode": {},
+									"AzureDBCustomerUS": {}
 								}
 							},
 							"staging": {},
@@ -709,7 +757,8 @@
 				"lastPublishTime": "2024-07-17T16:03:00Z"
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/dataflows/DF_ValidateSchema')]"
+				"[concat(variables('factoryId'), '/dataflows/dataflowRank')]",
+				"[concat(variables('factoryId'), '/dataflows/DF_CacheSinklookup')]"
 			]
 		},
 		{
@@ -4047,6 +4096,66 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/dataflowRank')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Emp_Gender_DS",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "Export_Samples_Data",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "rank1"
+						},
+						{
+							"name": "rank2"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          E_ID as string,",
+						"          E_NAME as string,",
+						"          D_ID as string,",
+						"          Gender as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 rank(asc(D_ID, true),",
+						"     output(RANK_ID as long)) ~> rank1",
+						"rank1 rank(asc(D_ID, true),",
+						"     output(Dense_Rank as long),",
+						"     dense: true) ~> rank2",
+						"rank2 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Emp_Gender_DS')]",
+				"[concat(variables('factoryId'), '/datasets/Export_Samples_Data')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/dataflow_Lookup')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -4243,6 +4352,298 @@
 			"apiVersion": "2018-06-01",
 			"properties": {},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DF_CacheSinklookup')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Table_customer_US_Country",
+								"type": "DatasetReference"
+							},
+							"name": "EmployeeIDMAX"
+						},
+						{
+							"dataset": {
+								"referenceName": "DelimitedText3",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						},
+						{
+							"dataset": {
+								"referenceName": "Country_Code",
+								"type": "DatasetReference"
+							},
+							"name": "CountryCodre"
+						}
+					],
+					"sinks": [
+						{
+							"name": "CacheSinkMaxEID"
+						},
+						{
+							"name": "CacheCountryCode"
+						},
+						{
+							"dataset": {
+								"referenceName": "Table_customer_US_Country",
+								"type": "DatasetReference"
+							},
+							"name": "AzureDBCustomerUS"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "SKEIDGenerator"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          MAX_EID as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     query: 'SELECT MAX(E_ID) AS MAX_EID FROM dbo.CUSTOMERS_US',",
+						"     format: 'query') ~> EmployeeIDMAX",
+						"source(output(",
+						"          customer as string,",
+						"          country as string,",
+						"          organization as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source(output(",
+						"          name as string,",
+						"          Country_Code as string,",
+						"          Country_Code2 as string,",
+						"          countryDesc_code as string,",
+						"          {iso_3166-2} as string,",
+						"          region as string,",
+						"          {sub-region} as string,",
+						"          {intermediate-region} as string,",
+						"          {region-code} as string,",
+						"          {sub-region-code} as string,",
+						"          {intermediate-region-code} as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> CountryCodre",
+						"SKEIDGenerator derive(E_ID = E_ID + CacheSinkMaxEID#outputs()[1].MAX_EID,",
+						"          country = CacheCountryCode#lookup(country).name) ~> derivedColumn1",
+						"source1 keyGenerate(output(E_ID as long),",
+						"     startAt: 1L,",
+						"     stepValue: 1L) ~> SKEIDGenerator",
+						"EmployeeIDMAX sink(validateSchema: false,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     store: 'cache',",
+						"     format: 'inline',",
+						"     output: false,",
+						"     saveOrder: 1) ~> CacheSinkMaxEID",
+						"CountryCodre sink(validateSchema: false,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     keys:['Country_Code'],",
+						"     store: 'cache',",
+						"     format: 'inline',",
+						"     output: false,",
+						"     saveOrder: 1) ~> CacheCountryCode",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          E_ID as integer,",
+						"          Customer_Name as string,",
+						"          COUNTRY as string,",
+						"          Organization as string",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          E_ID,",
+						"          Customer_Name = customer,",
+						"          COUNTRY = country,",
+						"          Organization = organization",
+						"     )) ~> AzureDBCustomerUS"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Table_customer_US_Country')]",
+				"[concat(variables('factoryId'), '/datasets/DelimitedText3')]",
+				"[concat(variables('factoryId'), '/datasets/Country_Code')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Table_customer_US_Country')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "2_AzureSqlDatabase",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "E_ID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Customer_Name",
+						"type": "varchar"
+					},
+					{
+						"name": "COUNTRY",
+						"type": "varchar"
+					},
+					{
+						"name": "Organization",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "CUSTOMERS_US"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/2_AzureSqlDatabase')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DelimitedText3')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage_Load_Sampless",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "Customers_Country_Info.csv",
+						"folderPath": "Samples",
+						"container": "container1"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "customer",
+						"type": "String"
+					},
+					{
+						"name": "country",
+						"type": "String"
+					},
+					{
+						"name": "organization",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage_Load_Sampless')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Country_Code')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "Country_Code.csv.csv",
+						"folderPath": "Samples",
+						"container": "container1"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "name",
+						"type": "String"
+					},
+					{
+						"name": "Country_Code",
+						"type": "String"
+					},
+					{
+						"name": "Country_Code2",
+						"type": "String"
+					},
+					{
+						"name": "countryDesc_code",
+						"type": "String"
+					},
+					{
+						"name": "iso_3166-2",
+						"type": "String"
+					},
+					{
+						"name": "region",
+						"type": "String"
+					},
+					{
+						"name": "sub-region",
+						"type": "String"
+					},
+					{
+						"name": "intermediate-region",
+						"type": "String"
+					},
+					{
+						"name": "region-code",
+						"type": "String"
+					},
+					{
+						"name": "sub-region-code",
+						"type": "String"
+					},
+					{
+						"name": "intermediate-region-code",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage1')]"
+			]
 		}
 	]
 }
