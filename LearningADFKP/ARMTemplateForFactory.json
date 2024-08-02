@@ -3676,7 +3676,7 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/ST_EVERY_10_HOURS')]",
+			"name": "[concat(parameters('factoryName'), '/ST_EVERY_5_HOURS')]",
 			"type": "Microsoft.DataFactory/factories/triggers",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -3695,9 +3695,9 @@
 				"typeProperties": {
 					"recurrence": {
 						"frequency": "Hour",
-						"interval": 10,
+						"interval": 5,
 						"startTime": "2024-07-14T17:26:00",
-						"endTime": "2024-07-20T23:59:00",
+						"endTime": "2024-08-12T23:59:00",
 						"timeZone": "India Standard Time"
 					}
 				}
