@@ -65,6 +65,11 @@
 				]
 			}
 		],
+		"variables": {
+			"V_PipelineVariable": {
+				"type": "String"
+			}
+		},
 		"annotations": [
 			"Dev"
 		]
